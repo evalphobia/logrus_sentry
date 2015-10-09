@@ -51,14 +51,14 @@ hook, err := logrus_sentry.NewWithTagsSentryHook(YOUR_DSN, tags, levels)
 
 ```
 
-If you wish to initialize a SentryHook with an already initialized raven client, you can use 
+If you wish to initialize a SentryHook with an already initialized raven client, you can use
 the `NewWithClientSentryHook` constructor:
 
 ```go
 import (
   "github.com/Sirupsen/logrus"
   "github.com/evalphobia/logrus_sentry"
-  "github.com/getsentry/raven-go"
+  "github.com/Zumata/raven"
 )
 
 func main() {
