@@ -20,6 +20,29 @@ var (
 	}
 )
 
+func getUserContext(d logrus.Fields) (*raven.User, bool) {
+	if v, ok := d["user"]; ok {
+		switch val := v.(type) {
+		case *raven.User:
+			return val, true
+
+		case raven.User:
+			return &val, true
+		}
+	}
+
+	username, _ := d["user_name"].(string)
+	email, _ := d["user_email"].(string)
+	id, _ := d["user_id"].(string)
+	ip, _ := d["user_ip"].(string)
+
+	if username == "" && email == "" && id == "" && ip == "" {
+		return nil, false
+	}
+
+	return &raven.User{id, username, email, ip}, true
+}
+
 func getAndDel(d logrus.Fields, key string) (string, bool) {
 	var (
 		ok  bool
@@ -142,6 +165,9 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	}
 	if req, ok := getAndDelRequest(d, "http_request"); ok {
 		packet.Interfaces = append(packet.Interfaces, raven.NewHttp(req))
+	}
+	if user, ok := getUserContext(d); ok {
+		packet.Interfaces = append(packet.Interfaces, user)
 	}
 	stConfig := &hook.StacktraceConfiguration
 	if stConfig.Enable && entry.Level <= stConfig.Level {
