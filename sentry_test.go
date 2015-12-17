@@ -33,7 +33,7 @@ func getTestLogger() *logrus.Logger {
 // so need to explicitly construct one for purpose of test
 type resultPacket struct {
 	raven.Packet
-	Stacktrace raven.Stacktrace `json:stacktrace`
+	Stacktrace raven.Stacktrace `json:"stacktrace"`
 }
 
 func WithTestDSN(t *testing.T, tf func(string, <-chan *resultPacket)) {
