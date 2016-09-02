@@ -1,7 +1,7 @@
 # Sentry Hook for Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:" />
 
 
-[![Build Status](https://travis-ci.org/evalphobia/logrus_sentry.svg?branch=master)](https://travis-ci.org/evalphobia/logrus_sentry)  [![Coverage Status](https://coveralls.io/repos/evalphobia/logrus_sentry/badge.svg?branch=master&service=github)](https://coveralls.io/github/evalphobia/logrus_sentry?branch=master)
+[![Build Status](https://travis-ci.org/evalphobia/logrus_sentry.svg?branch=master)](https://travis-ci.org/evalphobia/logrus_sentry)  [![Coverage Status](https://coveralls.io/repos/evalphobia/logrus_sentry/badge.svg?branch=master&service=github)](https://coveralls.io/github/evalphobia/logrus_sentry?branch=master) [![GoDoc](https://godoc.org/github.com/evalphobia/logrus_sentry?status.svg)](https://godoc.org/github.com/evalphobia/logrus_sentry)
 
 [Sentry](https://getsentry.com) provides both self-hosted and hosted
 solutions for exception tracking.
