@@ -21,78 +21,6 @@ var (
 	}
 )
 
-func getEventID(d logrus.Fields) (string, bool) {
-	eventID, ok := d["event_id"].(string)
-
-	if !ok {
-		return "", false
-	}
-
-	//verify eventID is 32 characters hexadecimal string (UUID4)
-	uuid := parseUUID(eventID)
-
-	if uuid == nil {
-		return "", false
-	}
-
-	return uuid.noDashString(), true
-}
-
-func getUserContext(d logrus.Fields) (*raven.User, bool) {
-	if v, ok := d["user"]; ok {
-		switch val := v.(type) {
-		case *raven.User:
-			return val, true
-
-		case raven.User:
-			return &val, true
-		}
-	}
-
-	username, _ := d["user_name"].(string)
-	email, _ := d["user_email"].(string)
-	id, _ := d["user_id"].(string)
-	ip, _ := d["user_ip"].(string)
-
-	if username == "" && email == "" && id == "" && ip == "" {
-		return nil, false
-	}
-
-	return &raven.User{
-		ID:       id,
-		Username: username,
-		Email:    email,
-		IP:       ip,
-	}, true
-}
-
-func getAndDel(d logrus.Fields, key string) (string, bool) {
-	if value, ok := d[key].(string); ok {
-		delete(d, key)
-		return value, true
-	} else {
-		return "", false
-	}
-}
-
-func getAndDelError(d logrus.Fields, key string) (error, bool) {
-	if value, ok := d[key].(error); ok {
-		delete(d, key)
-		return value, true
-	} else {
-		return nil, false
-	}
-}
-
-func getAndDelRequest(d logrus.Fields, key string) (*http.Request, bool) {
-	if value, ok := d[key].(*http.Request); ok {
-		delete(d, key)
-		return value, true
-	} else {
-		return nil, false
-	}
-}
-
 // SentryHook delivers logs to a sentry server.
 type SentryHook struct {
 	// Timeout sets the time to wait for a delivery error from the sentry server.
@@ -103,6 +31,9 @@ type SentryHook struct {
 
 	client *raven.Client
 	levels []logrus.Level
+
+	ignoreFields map[string]struct{}
+	extraFilters map[string]func(interface{}) interface{}
 }
 
 // StackTraceConfiguration allows for configuring stacktraces
@@ -155,29 +86,14 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 			Context:       0,
 			InAppPrefixes: nil,
 		},
-		client: client,
-		levels: levels,
+		client:       client,
+		levels:       levels,
+		ignoreFields: make(map[string]struct{}),
+		extraFilters: make(map[string]func(interface{}) interface{}),
 	}, nil
 }
 
-func formatExtraData(fields logrus.Fields) (ret map[string]interface{}) {
-	ret = make(map[string]interface{}, len(fields))
-	for key, value := range fields {
-		switch value := value.(type) {
-		case json.Marshaler:
-			ret[key] = value
-		case error:
-			ret[key] = value.Error()
-		case fmt.Stringer:
-			ret[key] = value.String()
-		default:
-			ret[key] = value
-		}
-	}
-	return
-}
-
-// Called when an event should be sent to sentry
+// Fire is called when an event should be sent to sentry
 // Special fields that sentry uses to give more information to the server
 // are extracted from entry.Data (if they are found)
 // These fields are: error, logger, server_name and http_request
@@ -191,10 +107,10 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 
 	d := entry.Data
 
-	if logger, ok := getAndDel(d, "logger"); ok {
+	if logger, ok := getAndDelString(d, "logger"); ok {
 		packet.Logger = logger
 	}
-	if serverName, ok := getAndDel(d, "server_name"); ok {
+	if serverName, ok := getAndDelString(d, "server_name"); ok {
 		packet.ServerName = serverName
 	}
 	if req, ok := getAndDelRequest(d, "http_request"); ok {
@@ -219,7 +135,7 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
-	packet.Extra = formatExtraData(d)
+	packet.Extra = hook.formatExtraData(d)
 
 	_, errCh := hook.client.Capture(packet, nil)
 	timeout := hook.Timeout
@@ -238,4 +154,114 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 // Levels returns the available logging levels.
 func (hook *SentryHook) Levels() []logrus.Level {
 	return hook.levels
+}
+
+// AddIgnore adds field name to ignore.
+func (hook *SentryHook) AddIgnore(name string) {
+	hook.ignoreFields[name] = struct{}{}
+}
+
+// AddExtraFilter adds a custom filter function.
+func (hook *SentryHook) AddExtraFilter(name string, fn func(interface{}) interface{}) {
+	hook.extraFilters[name] = fn
+}
+
+func (hook *SentryHook) formatExtraData(fields logrus.Fields) (result map[string]interface{}) {
+	// create a map for passing to Sentry's extra data
+	result = make(map[string]interface{}, len(fields))
+	for k, v := range fields {
+		if _, ok := hook.ignoreFields[k]; ok {
+			continue
+		}
+		if fn, ok := hook.extraFilters[k]; ok {
+			v = fn(v) // apply custom filter
+		} else {
+			v = formatData(v) // use default formatter
+		}
+		result[k] = v
+	}
+	return result
+}
+
+// formatData returns value as a suitable format.
+func formatData(value interface{}) (formatted interface{}) {
+	switch value := value.(type) {
+	case json.Marshaler:
+		return value
+	case error:
+		return value.Error()
+	case fmt.Stringer:
+		return value.String()
+	default:
+		return value
+	}
+}
+
+func getEventID(d logrus.Fields) (string, bool) {
+	eventID, ok := d["event_id"].(string)
+
+	if !ok {
+		return "", false
+	}
+
+	//verify eventID is 32 characters hexadecimal string (UUID4)
+	uuid := parseUUID(eventID)
+
+	if uuid == nil {
+		return "", false
+	}
+
+	return uuid.noDashString(), true
+}
+
+func getAndDelString(d logrus.Fields, key string) (string, bool) {
+	if value, ok := d[key].(string); ok {
+		delete(d, key)
+		return value, true
+	}
+	return "", false
+}
+
+func getAndDelError(d logrus.Fields, key string) (error, bool) {
+	if value, ok := d[key].(error); ok {
+		delete(d, key)
+		return value, true
+	}
+	return nil, false
+}
+
+func getAndDelRequest(d logrus.Fields, key string) (*http.Request, bool) {
+	if value, ok := d[key].(*http.Request); ok {
+		delete(d, key)
+		return value, true
+	}
+	return nil, false
+}
+
+func getUserContext(d logrus.Fields) (*raven.User, bool) {
+	if v, ok := d["user"]; ok {
+		switch val := v.(type) {
+		case *raven.User:
+			return val, true
+
+		case raven.User:
+			return &val, true
+		}
+	}
+
+	username, _ := d["user_name"].(string)
+	email, _ := d["user_email"].(string)
+	id, _ := d["user_id"].(string)
+	ip, _ := d["user_ip"].(string)
+
+	if username == "" && email == "" && id == "" && ip == "" {
+		return nil, false
+	}
+
+	return &raven.User{
+		ID:       id,
+		Username: username,
+		Email:    email,
+		IP:       ip,
+	}, true
 }
