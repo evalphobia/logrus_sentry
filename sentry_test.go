@@ -235,26 +235,160 @@ func TestSentryStacktrace(t *testing.T) {
 	})
 }
 
-func TestFormatExtraData(t *testing.T) {
-	fields := logrus.Fields{
-		"time_stamp":    time.Now(), // implements JSON marshaler
-		"time_duration": time.Hour,  // implements .String()
-		"err":           errors.New("this is a test error"),
-		"order":         13,
+func TestAddIgnore(t *testing.T) {
+	hook := SentryHook{
+		ignoreFields: make(map[string]struct{}),
 	}
 
-	formatted := formatExtraData(fields)
+	list := []string{"foo", "bar", "baz"}
+	for i, key := range list {
+		if len(hook.ignoreFields) != i {
+			t.Errorf("hook.ignoreFields has %d length, but %d", i, len(hook.ignoreFields))
+			continue
+		}
 
-	if _, ok := formatted["time_stamp"].(time.Time); !ok {
-		t.Error("json.Marshaler field shound't change type")
-	}
-	if _, ok := formatted["time_duration"].(string); !ok {
-		t.Error("fmt.Stringer field should be converted to string")
-	}
-	if _, ok := formatted["err"].(string); !ok {
-		t.Error("error field should be converted to string")
-	}
-	if _, ok := formatted["order"].(int); !ok {
-		t.Error("int field shound't change type")
+		hook.AddIgnore(key)
+		if len(hook.ignoreFields) != i+1 {
+			t.Errorf("hook.ignoreFields should be added")
+			continue
+		}
+		for j := 0; j <= i; j++ {
+			k := list[j]
+			if _, ok := hook.ignoreFields[k]; !ok {
+				t.Errorf("%s should be added into hook.ignoreFields", k)
+				continue
+			}
+		}
 	}
 }
+
+func TestAddExtraFilter(t *testing.T) {
+	hook := SentryHook{
+		extraFilters: make(map[string]func(interface{}) interface{}),
+	}
+
+	list := []string{"foo", "bar", "baz"}
+	for i, key := range list {
+		if len(hook.extraFilters) != i {
+			t.Errorf("hook.extraFilters has %d length, but %d", i, len(hook.extraFilters))
+			continue
+		}
+
+		hook.AddExtraFilter(key, nil)
+		if len(hook.extraFilters) != i+1 {
+			t.Errorf("hook.extraFilters should be added")
+			continue
+		}
+		for j := 0; j <= i; j++ {
+			k := list[j]
+			if _, ok := hook.extraFilters[k]; !ok {
+				t.Errorf("%s should be added into hook.extraFilters", k)
+				continue
+			}
+		}
+	}
+}
+
+func TestFormatExtraData(t *testing.T) {
+	hook := SentryHook{
+		ignoreFields: make(map[string]struct{}),
+		extraFilters: make(map[string]func(interface{}) interface{}),
+	}
+	hook.AddIgnore("ignore1")
+	hook.AddIgnore("ignore2")
+	hook.AddIgnore("ignore3")
+	hook.AddExtraFilter("filter1", func(v interface{}) interface{} {
+		return "filter1 value"
+	})
+
+	tests := []struct {
+		isExist  bool
+		key      string
+		value    interface{}
+		expected interface{}
+	}{
+		{true, "integer", 13, 13},
+		{true, "string", "foo", "foo"},
+		{true, "bool", true, true},
+		{true, "time.Time", time.Time{}, "0001-01-01 00:00:00 +0000 UTC"},
+		{true, "myStringer", myStringer{}, "myStringer!"},
+		{true, "myStringer_ptr", &myStringer{}, "myStringer!"},
+		{true, "notStringer", notStringer{}, notStringer{}},
+		{true, "notStringer_ptr", &notStringer{}, &notStringer{}},
+		{false, "ignore1", 13, false},
+		{false, "ignore2", "foo", false},
+		{false, "ignore3", time.Time{}, false},
+		{true, "filter1", "filter1", "filter1 value"},
+		{true, "filter1", time.Time{}, "filter1 value"},
+	}
+
+	for _, tt := range tests {
+		target := fmt.Sprintf("%+v", tt)
+
+		fields := logrus.Fields{
+			"time_stamp":    time.Now(), // implements JSON marshaler
+			"time_duration": time.Hour,  // implements .String()
+			"err":           errors.New("this is a test error"),
+			"order":         13,
+			tt.key:          tt.value,
+		}
+		result := hook.formatExtraData(fields)
+
+		value, ok := result[tt.key]
+		if !tt.isExist {
+			if ok {
+				t.Errorf("%s should not be exist. data=%s", tt.key, target)
+			}
+			continue
+		}
+
+		if fmt.Sprint(tt.expected) != fmt.Sprint(value) {
+			t.Errorf("%s should be %v, but %v. data=%s", tt.key, tt.expected, value, target)
+		}
+	}
+}
+
+func TestFormatData(t *testing.T) {
+	// assertion types
+	var (
+		assertTypeInt    int
+		assertTypeString string
+		assertTypeTime   time.Time
+	)
+
+	tests := []struct {
+		name         string
+		value        interface{}
+		expectedType interface{}
+	}{
+		{"int", 13, assertTypeInt},
+		{"string", "foo", assertTypeString},
+		{"error", errors.New("this is a test error"), assertTypeString},
+		{"time_stamp", time.Now(), assertTypeTime},        // implements JSON marshaler
+		{"time_duration", time.Hour, assertTypeString},    // implements .String()
+		{"stringer", myStringer{}, assertTypeString},      // implements .String()
+		{"stringer_ptr", &myStringer{}, assertTypeString}, // implements .String()
+		{"not_stringer", notStringer{}, notStringer{}},
+		{"not_stringer_ptr", &notStringer{}, &notStringer{}},
+	}
+
+	for _, tt := range tests {
+		target := fmt.Sprintf("%+v", tt)
+
+		result := formatData(tt.value)
+
+		resultType := reflect.TypeOf(result).String()
+		expectedType := reflect.TypeOf(tt.expectedType).String()
+		if resultType != expectedType {
+			t.Errorf("invalid type: type should be %s, but %s. data=%s", resultType, expectedType, target)
+		}
+	}
+}
+
+type myStringer struct{}
+
+func (myStringer) String() string { return "myStringer!" }
+
+type notStringer struct{}
+
+func (notStringer) String() {}
