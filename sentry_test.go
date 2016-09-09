@@ -36,6 +36,7 @@ func getTestLogger() *logrus.Logger {
 type resultPacket struct {
 	raven.Packet
 	Stacktrace raven.Stacktrace `json:"stacktrace"`
+	Exception  raven.Exception  `json:"exception"`
 }
 
 func WithTestDSN(t *testing.T, tf func(string, <-chan *resultPacket)) {
@@ -195,7 +196,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 197 //this should be the line number of the previous line
+		expectedLineno := 198 //this should be the line number of the previous line
 
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
@@ -231,6 +232,16 @@ func TestSentryStacktrace(t *testing.T) {
 		}
 		if !lastFrame.InApp {
 			t.Error("Frame should be identified as in_app")
+		}
+
+		logger.WithError(myStacktracerError{}).Error(message) // use an error that implements Stacktracer
+		packet = <-pch
+		var frames []*raven.StacktraceFrame
+		if packet.Exception.Stacktrace != nil {
+			frames = packet.Exception.Stacktrace.Frames
+		}
+		if len(frames) != 1 || frames[0].Filename != escpectedStackFrameFilename {
+			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")
 		}
 	})
 }
@@ -392,3 +403,17 @@ func (myStringer) String() string { return "myStringer!" }
 type notStringer struct{}
 
 func (notStringer) String() {}
+
+type myStacktracerError struct{}
+
+func (myStacktracerError) Error() string { return "myStacktracerError!" }
+
+const escpectedStackFrameFilename = "errorFile.go"
+
+func (myStacktracerError) GetStacktrace() *raven.Stacktrace {
+	return &raven.Stacktrace{
+		Frames: []*raven.StacktraceFrame{
+			{Filename: escpectedStackFrameFilename},
+		},
+	}
+}

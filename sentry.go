@@ -36,6 +36,10 @@ type SentryHook struct {
 	extraFilters map[string]func(interface{}) interface{}
 }
 
+type Stacktracer interface {
+	GetStacktrace() *raven.Stacktrace
+}
+
 // StackTraceConfiguration allows for configuring stacktraces
 type StackTraceConfiguration struct {
 	// whether stacktraces should be enabled
@@ -125,12 +129,18 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 
 	stConfig := &hook.StacktraceConfiguration
 	if stConfig.Enable && entry.Level <= stConfig.Level {
-		currentStacktrace := raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 		if err, ok := getAndDelError(d, logrus.ErrorKey); ok {
+			var currentStacktrace *raven.Stacktrace
+			if stacktracer, ok := err.(Stacktracer); ok {
+				currentStacktrace = stacktracer.GetStacktrace()
+			} else {
+				currentStacktrace = raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
+			}
 			exc := raven.NewException(err, currentStacktrace)
 			packet.Interfaces = append(packet.Interfaces, exc)
 			packet.Culprit = err.Error()
 		} else {
+			currentStacktrace := raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			packet.Interfaces = append(packet.Interfaces, currentStacktrace)
 		}
 	}
