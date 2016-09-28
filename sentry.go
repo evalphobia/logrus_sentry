@@ -102,12 +102,11 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 // are extracted from entry.Data (if they are found)
 // These fields are: error, logger, server_name and http_request
 func (hook *SentryHook) Fire(entry *logrus.Entry) error {
-	packet := &raven.Packet{
-		Message:   entry.Message,
-		Timestamp: raven.Timestamp(entry.Time),
-		Level:     severityMap[entry.Level],
-		Platform:  "go",
-	}
+
+	packet := raven.NewPacket(entry.Message)
+	packet.Timestamp = raven.Timestamp(entry.Time)
+	packet.Level = severityMap[entry.Level]
+	packet.Platform = "go"
 
 	d := entry.Data
 
