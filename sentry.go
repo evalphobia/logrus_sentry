@@ -144,7 +144,14 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
-	packet.Extra = hook.formatExtraData(d)
+	dataExtra := hook.formatExtraData(d)
+	if packet.Extra == nil {
+		packet.Extra = dataExtra
+	} else {
+		for k, v := range dataExtra {
+			packet.Extra[k] = v
+		}
+	}
 
 	_, errCh := hook.client.Capture(packet, nil)
 	timeout := hook.Timeout
