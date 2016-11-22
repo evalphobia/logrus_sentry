@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -44,6 +45,10 @@ type Stacktracer interface {
 
 type causer interface {
 	Cause() error
+}
+
+type pkgErrorStackTracer interface {
+	StackTrace() errors.StackTrace
 }
 
 // StackTraceConfiguration allows for configuring stacktraces
@@ -136,7 +141,7 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	if stConfig.Enable && entry.Level <= stConfig.Level {
 		if err, ok := getAndDelError(d, logrus.ErrorKey); ok {
 			var currentStacktrace *raven.Stacktrace
-			currentStacktrace, err = findStacktraceAndCause(err)
+			currentStacktrace, err = hook.findStacktraceAndCause(err)
 			if currentStacktrace == nil {
 				currentStacktrace = raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			}
@@ -172,12 +177,18 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func findStacktraceAndCause(err error) (*raven.Stacktrace, error) {
+func (hook *SentryHook) findStacktraceAndCause(err error) (*raven.Stacktrace, error) {
 	errCause := errors.Cause(err)
 	var stacktrace *raven.Stacktrace
+	var stackErr errors.StackTrace
 	for err != nil {
+		// Find the earliest *raven.Stacktrace, or error.StackTrace
 		if tracer, ok := err.(Stacktracer); ok {
 			stacktrace = tracer.GetStacktrace()
+			stackErr = nil
+		} else if tracer, ok := err.(pkgErrorStackTracer); ok {
+			stacktrace = nil
+			stackErr = tracer.StackTrace()
 		}
 		if cause, ok := err.(causer); ok {
 			err = cause.Cause()
@@ -185,7 +196,25 @@ func findStacktraceAndCause(err error) (*raven.Stacktrace, error) {
 			break
 		}
 	}
+	if stackErr != nil {
+		stacktrace = hook.convertStackTrace(stackErr)
+	}
 	return stacktrace, errCause
+}
+
+// convertStackTrace converts an errors.StackTrace into a natively consumable
+// *raven.Stacktrace
+func (hook *SentryHook) convertStackTrace(st errors.StackTrace) *raven.Stacktrace {
+	stConfig := &hook.StacktraceConfiguration
+	stFrames := []errors.Frame(st)
+	frames := make([]*raven.StacktraceFrame, 0, len(stFrames))
+	for i := range stFrames {
+		pc := uintptr(stFrames[i])
+		fn := runtime.FuncForPC(pc)
+		file, line := fn.FileLine(pc)
+		frames = append(frames, raven.NewStacktraceFrame(pc, file, line, stConfig.Context, stConfig.InAppPrefixes))
+	}
+	return &raven.Stacktrace{Frames: frames}
 }
 
 // Levels returns the available logging levels.

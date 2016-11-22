@@ -257,6 +257,24 @@ func TestSentryStacktrace(t *testing.T) {
 		if len(frames) != 1 || frames[0].Filename != expectedStackFrameFilename {
 			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")
 		}
+
+		logger.WithError(pkgerrors.New("errorX")).Error(message) // use an error that implements pkgErrorStackTracer
+		packet = <-pch
+		if packet.Exception.Stacktrace != nil {
+			frames = packet.Exception.Stacktrace.Frames
+		}
+		expectedPkgErrorsStackTraceFilename := "github.com/evalphobia/logrus_sentry/sentry_test.go"
+		expectedFrameCount := 5
+		expectedCulprit = "errorX"
+		if packet.Culprit != expectedCulprit {
+			t.Errorf("Expected culprit of '%s', got '%s'", expectedCulprit, packet.Culprit)
+		}
+		if len(frames) != expectedFrameCount {
+			t.Errorf("Expected %d frames, got %d", expectedFrameCount, len(frames))
+		}
+		if frames[0].Filename != expectedPkgErrorsStackTraceFilename {
+			t.Error("Stacktrace should be taken from err if it implements the pkgErrorStackTracer interface")
+		}
 	})
 }
 
