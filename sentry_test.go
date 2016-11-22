@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/getsentry/raven-go"
+	"github.com/Zumata/raven"
 )
 
 const (

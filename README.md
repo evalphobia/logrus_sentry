@@ -56,7 +56,7 @@ the `NewWithClientSentryHook` constructor:
 import (
   "github.com/Sirupsen/logrus"
   "github.com/evalphobia/logrus_sentry"
-  "github.com/getsentry/raven-go"
+  "github.com/Zumata/raven"
 )
 
 func main() {
