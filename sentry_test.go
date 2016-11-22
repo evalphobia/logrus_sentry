@@ -17,6 +17,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/getsentry/raven-go"
+	pkgerrors "github.com/pkg/errors"
 )
 
 const (
@@ -196,7 +197,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 198 //this should be the line number of the previous line
+		expectedLineno := 199 //this should be the line number of the previous line
 
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
@@ -239,6 +240,19 @@ func TestSentryStacktrace(t *testing.T) {
 		var frames []*raven.StacktraceFrame
 		if packet.Exception.Stacktrace != nil {
 			frames = packet.Exception.Stacktrace.Frames
+		}
+		if len(frames) != 1 || frames[0].Filename != expectedStackFrameFilename {
+			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")
+		}
+
+		logger.WithError(pkgerrors.Wrap(myStacktracerError{}, "wrapped")).Error(message) // use an error that wraps a Stacktracer
+		packet = <-pch
+		if packet.Exception.Stacktrace != nil {
+			frames = packet.Exception.Stacktrace.Frames
+		}
+		expectedCulprit := "myStacktracerError!"
+		if packet.Culprit != expectedCulprit {
+			t.Errorf("Expected culprit of '%s', got '%s'", expectedCulprit, packet.Culprit)
 		}
 		if len(frames) != 1 || frames[0].Filename != expectedStackFrameFilename {
 			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")

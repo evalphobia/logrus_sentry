@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/getsentry/raven-go"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -36,8 +37,13 @@ type SentryHook struct {
 	extraFilters map[string]func(interface{}) interface{}
 }
 
+// The Stacktracer interface allows an error type to return a raven.Stacktrace.
 type Stacktracer interface {
 	GetStacktrace() *raven.Stacktrace
+}
+
+type causer interface {
+	Cause() error
 }
 
 // StackTraceConfiguration allows for configuring stacktraces
@@ -130,9 +136,8 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	if stConfig.Enable && entry.Level <= stConfig.Level {
 		if err, ok := getAndDelError(d, logrus.ErrorKey); ok {
 			var currentStacktrace *raven.Stacktrace
-			if stacktracer, ok := err.(Stacktracer); ok {
-				currentStacktrace = stacktracer.GetStacktrace()
-			} else {
+			currentStacktrace, err = findStacktraceAndCause(err)
+			if currentStacktrace == nil {
 				currentStacktrace = raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			}
 			exc := raven.NewException(err, currentStacktrace)
@@ -165,6 +170,22 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 	return nil
+}
+
+func findStacktraceAndCause(err error) (*raven.Stacktrace, error) {
+	errCause := errors.Cause(err)
+	var stacktrace *raven.Stacktrace
+	for err != nil {
+		if tracer, ok := err.(Stacktracer); ok {
+			stacktrace = tracer.GetStacktrace()
+		}
+		if cause, ok := err.(causer); ok {
+			err = cause.Cause()
+		} else {
+			break
+		}
+	}
+	return stacktrace, errCause
 }
 
 // Levels returns the available logging levels.
