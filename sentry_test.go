@@ -240,7 +240,7 @@ func TestSentryStacktrace(t *testing.T) {
 		if packet.Exception.Stacktrace != nil {
 			frames = packet.Exception.Stacktrace.Frames
 		}
-		if len(frames) != 1 || frames[0].Filename != escpectedStackFrameFilename {
+		if len(frames) != 1 || frames[0].Filename != expectedStackFrameFilename {
 			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")
 		}
 	})
@@ -408,12 +408,12 @@ type myStacktracerError struct{}
 
 func (myStacktracerError) Error() string { return "myStacktracerError!" }
 
-const escpectedStackFrameFilename = "errorFile.go"
+const expectedStackFrameFilename = "errorFile.go"
 
 func (myStacktracerError) GetStacktrace() *raven.Stacktrace {
 	return &raven.Stacktrace{
 		Frames: []*raven.StacktraceFrame{
-			{Filename: escpectedStackFrameFilename},
+			{Filename: expectedStackFrameFilename},
 		},
 	}
 }
