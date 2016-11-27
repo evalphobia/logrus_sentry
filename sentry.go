@@ -225,6 +225,16 @@ func (hook *SentryHook) Levels() []logrus.Level {
 	return hook.levels
 }
 
+// SetRelease sets release tag.
+func (hook *SentryHook) SetRelease(release string) {
+	hook.client.SetRelease(release)
+}
+
+// SetEnvironment sets environment tag.
+func (hook *SentryHook) SetEnvironment(environment string) {
+	hook.client.SetEnvironment(environment)
+}
+
 // AddIgnore adds field name to ignore.
 func (hook *SentryHook) AddIgnore(name string) {
 	hook.ignoreFields[name] = struct{}{}
