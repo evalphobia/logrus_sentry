@@ -103,6 +103,9 @@ func TestGetLogger(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.Equal(tt.value, logger, target)
+			assert.True(df.isOmit("logger"), "`logger` should be in omitList")
+		} else {
+			assert.False(df.isOmit("logger"), "`logger` should not be in omitList")
 		}
 	}
 }
@@ -135,6 +138,9 @@ func TestGetServerName(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.Equal(tt.value, serverName, target)
+			assert.True(df.isOmit("server_name"), "`server_name` should be in omitList")
+		} else {
+			assert.False(df.isOmit("server_name"), "`server_name` should not be in omitList")
 		}
 	}
 }
@@ -151,6 +157,7 @@ func TestGetTags(t *testing.T) {
 		{"tags", raven.Tags{{Key: "key", Value: "value"}}, true, "valid tags"},
 		{"tags", raven.Tags{}, true, "valid tags"},
 		{"not_tags", raven.Tags{{Key: "key", Value: "value"}}, false, "invalid key"},
+		{"tags", &raven.Tags{}, false, "invalid value type"},
 		{"tags", "test_tags", false, "invalid value type"},
 		{"tags", 1, false, "invalid value type"},
 		{"tags", true, false, "invalid value type"},
@@ -168,6 +175,9 @@ func TestGetTags(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.Equal(tt.value, tags, target)
+			assert.True(df.isOmit("tags"), "`tags` should be in omitList")
+		} else {
+			assert.False(df.isOmit("tags"), "`tags` should not be in omitList")
 		}
 	}
 }
@@ -201,6 +211,9 @@ func TestGetError(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.Equal(tt.value, err, target)
+			assert.True(df.isOmit("error"), "`error` should be in omitList")
+		} else {
+			assert.False(df.isOmit("error"), "`error` should not be in omitList")
 		}
 	}
 }
@@ -234,6 +247,9 @@ func TestGetHTTPRequest(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.Equal(tt.value, req, target)
+			assert.True(df.isOmit("http_request"), "`http_request` should be in omitList")
+		} else {
+			assert.False(df.isOmit("http_request"), "`http_request` should not be in omitList")
 		}
 	}
 }
@@ -270,6 +286,9 @@ func TestGetEventID(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.Equal("ffffffffffffffffffffffffffffffff", eventID, target)
+			assert.True(df.isOmit("event_id"), "`event_id` should be in omitList")
+		} else {
+			assert.False(df.isOmit("event_id"), "`event_id` should not be in omitList")
 		}
 	}
 }
@@ -303,6 +322,9 @@ func TestGetUser(t *testing.T) {
 		assert.Equal(tt.expected, ok, target)
 		if ok {
 			assert.IsType(&raven.User{}, user, target)
+			assert.True(df.isOmit("user"), "`user` should be in omitList")
+		} else {
+			assert.False(df.isOmit("user"), "`user` should not be in omitList")
 		}
 	}
 }
