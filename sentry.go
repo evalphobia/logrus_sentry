@@ -111,7 +111,7 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 // Fire is called when an event should be sent to sentry
 // Special fields that sentry uses to give more information to the server
 // are extracted from entry.Data (if they are found)
-// These fields are: error, logger, server_name and http_request
+// These fields are: error, logger, server_name, http_request, tags
 func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 
 	packet := raven.NewPacket(entry.Message)
@@ -129,6 +129,9 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	}
 	if req, ok := getAndDelRequest(d, "http_request"); ok {
 		packet.Interfaces = append(packet.Interfaces, raven.NewHttp(req))
+	}
+	if tags, ok := getAndDeleteTags(d, "tags"); ok {
+		packet.Tags = tags
 	}
 	if user, ok := getUserContext(d); ok {
 		packet.Interfaces = append(packet.Interfaces, user)
@@ -298,6 +301,14 @@ func getAndDelError(d logrus.Fields, key string) (error, bool) {
 
 func getAndDelRequest(d logrus.Fields, key string) (*http.Request, bool) {
 	if value, ok := d[key].(*http.Request); ok {
+		delete(d, key)
+		return value, true
+	}
+	return nil, false
+}
+
+func getAndDeleteTags(d logrus.Fields, key string) (raven.Tags, bool) {
+	if value, ok := d[key].(raven.Tags); ok {
 		delete(d, key)
 		return value, true
 	}
