@@ -96,6 +96,7 @@ Some logrus fields have a special meaning in this hook, and they will be especia
 | `user_id`  | ID of the user who is in the context of the event |
 | `user_ip`  | IP of the user who is in the context of the event |
 | `server_name`  | Also known as hostname, it is the name of the server which is logging the event (hostname.example.com)  |
+| `tags`  | `tags` are `raven.Tags` struct from `github.com/getsentry/raven-go` and override default tags data |
 | `logger`  | `logger` is the part of the application which is logging the event. In go this usually means setting it to the name of the package. |
 | `http_request`  | `http_request` is the in-coming request(*http.Request). The detailed request data are sent to Sentry. |
 
