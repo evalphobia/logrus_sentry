@@ -17,6 +17,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/getsentry/raven-go"
+	pkgerrors "github.com/pkg/errors"
 )
 
 const (
@@ -196,7 +197,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 198 //this should be the line number of the previous line
+		expectedLineno := 199 //this should be the line number of the previous line
 
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
@@ -240,8 +241,39 @@ func TestSentryStacktrace(t *testing.T) {
 		if packet.Exception.Stacktrace != nil {
 			frames = packet.Exception.Stacktrace.Frames
 		}
-		if len(frames) != 1 || frames[0].Filename != escpectedStackFrameFilename {
+		if len(frames) != 1 || frames[0].Filename != expectedStackFrameFilename {
 			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")
+		}
+
+		logger.WithError(pkgerrors.Wrap(myStacktracerError{}, "wrapped")).Error(message) // use an error that wraps a Stacktracer
+		packet = <-pch
+		if packet.Exception.Stacktrace != nil {
+			frames = packet.Exception.Stacktrace.Frames
+		}
+		expectedCulprit := "myStacktracerError!"
+		if packet.Culprit != expectedCulprit {
+			t.Errorf("Expected culprit of '%s', got '%s'", expectedCulprit, packet.Culprit)
+		}
+		if len(frames) != 1 || frames[0].Filename != expectedStackFrameFilename {
+			t.Error("Stacktrace should be taken from err if it implements the Stacktracer interface")
+		}
+
+		logger.WithError(pkgerrors.New("errorX")).Error(message) // use an error that implements pkgErrorStackTracer
+		packet = <-pch
+		if packet.Exception.Stacktrace != nil {
+			frames = packet.Exception.Stacktrace.Frames
+		}
+		expectedPkgErrorsStackTraceFilename := "github.com/evalphobia/logrus_sentry/sentry_test.go"
+		expectedFrameCount := 5
+		expectedCulprit = "errorX"
+		if packet.Culprit != expectedCulprit {
+			t.Errorf("Expected culprit of '%s', got '%s'", expectedCulprit, packet.Culprit)
+		}
+		if len(frames) != expectedFrameCount {
+			t.Errorf("Expected %d frames, got %d", expectedFrameCount, len(frames))
+		}
+		if frames[0].Filename != expectedPkgErrorsStackTraceFilename {
+			t.Error("Stacktrace should be taken from err if it implements the pkgErrorStackTracer interface")
 		}
 	})
 }
@@ -408,12 +440,12 @@ type myStacktracerError struct{}
 
 func (myStacktracerError) Error() string { return "myStacktracerError!" }
 
-const escpectedStackFrameFilename = "errorFile.go"
+const expectedStackFrameFilename = "errorFile.go"
 
 func (myStacktracerError) GetStacktrace() *raven.Stacktrace {
 	return &raven.Stacktrace{
 		Frames: []*raven.StacktraceFrame{
-			{Filename: escpectedStackFrameFilename},
+			{Filename: expectedStackFrameFilename},
 		},
 	}
 }
