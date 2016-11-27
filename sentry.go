@@ -3,7 +3,6 @@ package logrus_sentry
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"runtime"
 	"time"
 
@@ -113,36 +112,37 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 // are extracted from entry.Data (if they are found)
 // These fields are: error, logger, server_name, http_request, tags
 func (hook *SentryHook) Fire(entry *logrus.Entry) error {
-
 	packet := raven.NewPacket(entry.Message)
 	packet.Timestamp = raven.Timestamp(entry.Time)
 	packet.Level = severityMap[entry.Level]
 	packet.Platform = "go"
 
-	d := entry.Data
+	df := newDataField(entry.Data)
 
-	if logger, ok := getAndDelString(d, "logger"); ok {
+	// set special fields
+	if logger, ok := df.getLogger(); ok {
 		packet.Logger = logger
 	}
-	if serverName, ok := getAndDelString(d, "server_name"); ok {
+	if serverName, ok := df.getServerName(); ok {
 		packet.ServerName = serverName
 	}
-	if req, ok := getAndDelRequest(d, "http_request"); ok {
-		packet.Interfaces = append(packet.Interfaces, raven.NewHttp(req))
-	}
-	if tags, ok := getAndDeleteTags(d, "tags"); ok {
-		packet.Tags = tags
-	}
-	if user, ok := getUserContext(d); ok {
-		packet.Interfaces = append(packet.Interfaces, user)
-	}
-	if eventID, ok := getEventID(d); ok {
+	if eventID, ok := df.getEventID(); ok {
 		packet.EventID = eventID
 	}
+	if tags, ok := df.getTags(); ok {
+		packet.Tags = tags
+	}
+	if req, ok := df.getHTTPRequest(); ok {
+		packet.Interfaces = append(packet.Interfaces, raven.NewHttp(req))
+	}
+	if user, ok := df.getUser(); ok {
+		packet.Interfaces = append(packet.Interfaces, user)
+	}
 
+	// set stacktrace data
 	stConfig := &hook.StacktraceConfiguration
 	if stConfig.Enable && entry.Level <= stConfig.Level {
-		if err, ok := getAndDelError(d, logrus.ErrorKey); ok {
+		if err, ok := df.getError(); ok {
 			var currentStacktrace *raven.Stacktrace
 			currentStacktrace, err = hook.findStacktraceAndCause(err)
 			if currentStacktrace == nil {
@@ -157,7 +157,8 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
-	dataExtra := hook.formatExtraData(d)
+	// set other fields
+	dataExtra := hook.formatExtraData(df)
 	if packet.Extra == nil {
 		packet.Extra = dataExtra
 	} else {
@@ -235,13 +236,17 @@ func (hook *SentryHook) AddExtraFilter(name string, fn func(interface{}) interfa
 	hook.extraFilters[name] = fn
 }
 
-func (hook *SentryHook) formatExtraData(fields logrus.Fields) (result map[string]interface{}) {
+func (hook *SentryHook) formatExtraData(df *dataField) (result map[string]interface{}) {
 	// create a map for passing to Sentry's extra data
-	result = make(map[string]interface{}, len(fields))
-	for k, v := range fields {
+	result = make(map[string]interface{}, df.len())
+	for k, v := range df.data {
+		if df.isOmit(k) {
+			continue // skip already used special fields
+		}
 		if _, ok := hook.ignoreFields[k]; ok {
 			continue
 		}
+
 		if fn, ok := hook.extraFilters[k]; ok {
 			v = fn(v) // apply custom filter
 		} else {
@@ -264,81 +269,4 @@ func formatData(value interface{}) (formatted interface{}) {
 	default:
 		return value
 	}
-}
-
-func getEventID(d logrus.Fields) (string, bool) {
-	eventID, ok := d["event_id"].(string)
-
-	if !ok {
-		return "", false
-	}
-
-	//verify eventID is 32 characters hexadecimal string (UUID4)
-	uuid := parseUUID(eventID)
-
-	if uuid == nil {
-		return "", false
-	}
-
-	return uuid.noDashString(), true
-}
-
-func getAndDelString(d logrus.Fields, key string) (string, bool) {
-	if value, ok := d[key].(string); ok {
-		delete(d, key)
-		return value, true
-	}
-	return "", false
-}
-
-func getAndDelError(d logrus.Fields, key string) (error, bool) {
-	if value, ok := d[key].(error); ok {
-		delete(d, key)
-		return value, true
-	}
-	return nil, false
-}
-
-func getAndDelRequest(d logrus.Fields, key string) (*http.Request, bool) {
-	if value, ok := d[key].(*http.Request); ok {
-		delete(d, key)
-		return value, true
-	}
-	return nil, false
-}
-
-func getAndDeleteTags(d logrus.Fields, key string) (raven.Tags, bool) {
-	if value, ok := d[key].(raven.Tags); ok {
-		delete(d, key)
-		return value, true
-	}
-	return nil, false
-}
-
-func getUserContext(d logrus.Fields) (*raven.User, bool) {
-	if v, ok := d["user"]; ok {
-		switch val := v.(type) {
-		case *raven.User:
-			return val, true
-
-		case raven.User:
-			return &val, true
-		}
-	}
-
-	username, _ := d["user_name"].(string)
-	email, _ := d["user_email"].(string)
-	id, _ := d["user_id"].(string)
-	ip, _ := d["user_ip"].(string)
-
-	if username == "" && email == "" && id == "" && ip == "" {
-		return nil, false
-	}
-
-	return &raven.User{
-		ID:       id,
-		Username: username,
-		Email:    email,
-		IP:       ip,
-	}, true
 }

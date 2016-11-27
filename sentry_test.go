@@ -375,7 +375,8 @@ func TestFormatExtraData(t *testing.T) {
 			"order":         13,
 			tt.key:          tt.value,
 		}
-		result := hook.formatExtraData(fields)
+		df := newDataField(fields)
+		result := hook.formatExtraData(df)
 
 		value, ok := result[tt.key]
 		if !tt.isExist {
