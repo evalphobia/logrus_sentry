@@ -198,6 +198,10 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
+	return hook.sendPacket(packet)
+}
+
+func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
 	_, errCh := hook.client.Capture(packet, nil)
 	timeout := hook.Timeout
 	if timeout != 0 {
