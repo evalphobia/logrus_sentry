@@ -110,21 +110,21 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 }
 
 // NewAsyncSentryHook creates a hook same as NewSentryHook, but in asynchronous
-// mode.
+// mode. This method sets the timeout to 1000 milliseconds.
 func NewAsyncSentryHook(DSN string, levels []logrus.Level) (*SentryHook, error) {
 	hook, err := NewSentryHook(DSN, levels)
 	return setAsync(hook), err
 }
 
 // NewAsyncWithTagsSentryHook creates a hook same as NewWithTagsSentryHook, but
-// in asynchronous mode.
+// in asynchronous mode. This method sets the timeout to 1000 milliseconds.
 func NewAsyncWithTagsSentryHook(DSN string, tags map[string]string, levels []logrus.Level) (*SentryHook, error) {
 	hook, err := NewWithTagsSentryHook(DSN, tags, levels)
 	return setAsync(hook), err
 }
 
 // NewAsyncWithClientSentryHook creates a hook same as NewWithClientSentryHook,
-// but in asynchronous mode.
+// but in asynchronous mode. This method sets the timeout to 1000 milliseconds.
 func NewAsyncWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*SentryHook, error) {
 	hook, err := NewWithClientSentryHook(client, levels)
 	return setAsync(hook), err
@@ -134,6 +134,7 @@ func setAsync(hook *SentryHook) *SentryHook {
 	if hook == nil {
 		return nil
 	}
+	hook.Timeout = 1 * time.Second
 	hook.asynchronous = true
 	return hook
 }
