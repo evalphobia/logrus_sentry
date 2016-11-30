@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -22,6 +23,11 @@ var (
 	}
 )
 
+// BufSize controls the number of logs that can be in progress before logging
+// will start blocking. Set logrus_sentry.BufSize = <value> _before_ calling
+// NewAsync*().
+var BufSize uint = 8192
+
 // SentryHook delivers logs to a sentry server.
 type SentryHook struct {
 	// Timeout sets the time to wait for a delivery error from the sentry server.
@@ -37,6 +43,8 @@ type SentryHook struct {
 	extraFilters map[string]func(interface{}) interface{}
 
 	asynchronous bool
+	buf          chan *raven.Packet
+	wg           sync.WaitGroup
 }
 
 // The Stacktracer interface allows an error type to return a raven.Stacktrace.
@@ -136,6 +144,8 @@ func setAsync(hook *SentryHook) *SentryHook {
 	}
 	hook.Timeout = 1 * time.Second
 	hook.asynchronous = true
+	hook.buf = make(chan *raven.Packet, BufSize)
+	go hook.fire() // Log in background
 	return hook
 }
 
@@ -199,7 +209,22 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
+	if hook.asynchronous {
+		hook.wg.Add(1)
+		hook.buf <- packet
+		return nil
+	}
 	return hook.sendPacket(packet)
+}
+
+func (hook *SentryHook) fire() {
+	for {
+		packet := <-hook.buf
+		if err := hook.sendPacket(packet); err != nil {
+			fmt.Println(err)
+		}
+		hook.wg.Done()
+	}
 }
 
 func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
