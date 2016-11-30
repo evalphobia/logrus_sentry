@@ -45,6 +45,7 @@ type SentryHook struct {
 	asynchronous bool
 	buf          chan *raven.Packet
 	wg           sync.WaitGroup
+	mu           sync.RWMutex
 }
 
 // The Stacktracer interface allows an error type to return a raven.Stacktrace.
@@ -154,6 +155,8 @@ func setAsync(hook *SentryHook) *SentryHook {
 // are extracted from entry.Data (if they are found)
 // These fields are: error, logger, server_name, http_request, tags
 func (hook *SentryHook) Fire(entry *logrus.Entry) error {
+	hook.mu.RLock() // Allow multiple go routines to log simultaneously
+	defer hook.mu.RUnlock()
 	packet := raven.NewPacket(entry.Message)
 	packet.Timestamp = raven.Timestamp(entry.Time)
 	packet.Level = severityMap[entry.Level]
@@ -225,6 +228,18 @@ func (hook *SentryHook) fire() {
 		}
 		hook.wg.Done()
 	}
+}
+
+// Flush waits for the log queue to empty. This function only does anything in
+// asynchronous mode.
+func (hook *SentryHook) Flush() {
+	if !hook.asynchronous {
+		return
+	}
+	hook.mu.Lock() // Claim exclusive access; any logging goroutines will block until the flush completes
+	defer hook.mu.Unlock()
+
+	hook.wg.Wait()
 }
 
 func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
