@@ -35,6 +35,8 @@ type SentryHook struct {
 
 	ignoreFields map[string]struct{}
 	extraFilters map[string]func(interface{}) interface{}
+
+	asynchronous bool
 }
 
 // The Stacktracer interface allows an error type to return a raven.Stacktrace.
@@ -105,6 +107,35 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 		ignoreFields: make(map[string]struct{}),
 		extraFilters: make(map[string]func(interface{}) interface{}),
 	}, nil
+}
+
+// NewAsyncSentryHook creates a hook same as NewSentryHook, but in asynchronous
+// mode.
+func NewAsyncSentryHook(DSN string, levels []logrus.Level) (*SentryHook, error) {
+	hook, err := NewSentryHook(DSN, levels)
+	return setAsync(hook), err
+}
+
+// NewAsyncWithTagsSentryHook creates a hook same as NewWithTagsSentryHook, but
+// in asynchronous mode.
+func NewAsyncWithTagsSentryHook(DSN string, tags map[string]string, levels []logrus.Level) (*SentryHook, error) {
+	hook, err := NewWithTagsSentryHook(DSN, tags, levels)
+	return setAsync(hook), err
+}
+
+// NewAsyncWithClientSentryHook creates a hook same as NewWithClientSentryHook,
+// but in asynchronous mode.
+func NewAsyncWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*SentryHook, error) {
+	hook, err := NewWithClientSentryHook(client, levels)
+	return setAsync(hook), err
+}
+
+func setAsync(hook *SentryHook) *SentryHook {
+	if hook == nil {
+		return nil
+	}
+	hook.asynchronous = true
+	return hook
 }
 
 // Fire is called when an event should be sent to sentry
