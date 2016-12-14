@@ -264,7 +264,7 @@ func TestSentryStacktrace(t *testing.T) {
 			frames = packet.Exception.Stacktrace.Frames
 		}
 		expectedPkgErrorsStackTraceFilename := "github.com/evalphobia/logrus_sentry/sentry_test.go"
-		expectedFrameCount := 5
+		expectedFrameCount := 4
 		expectedCulprit = "errorX"
 		if packet.Culprit != expectedCulprit {
 			t.Errorf("Expected culprit of '%s', got '%s'", expectedCulprit, packet.Culprit)
