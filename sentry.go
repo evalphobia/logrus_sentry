@@ -189,7 +189,8 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	if stConfig.Enable && entry.Level <= stConfig.Level {
 		if err, ok := df.getError(); ok {
 			var currentStacktrace *raven.Stacktrace
-			currentStacktrace, err = hook.findStacktraceAndCause(err)
+			err := errors.Cause(err)
+			currentStacktrace = hook.findStacktrace(err)
 			if currentStacktrace == nil {
 				currentStacktrace = raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			}
@@ -257,8 +258,7 @@ func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
 	return nil
 }
 
-func (hook *SentryHook) findStacktraceAndCause(err error) (*raven.Stacktrace, error) {
-	errCause := errors.Cause(err)
+func (hook *SentryHook) findStacktrace(err error) *raven.Stacktrace {
 	var stacktrace *raven.Stacktrace
 	var stackErr errors.StackTrace
 	for err != nil {
@@ -279,7 +279,7 @@ func (hook *SentryHook) findStacktraceAndCause(err error) (*raven.Stacktrace, er
 	if stackErr != nil {
 		stacktrace = hook.convertStackTrace(stackErr)
 	}
-	return stacktrace, errCause
+	return stacktrace
 }
 
 // convertStackTrace converts an errors.StackTrace into a natively consumable
