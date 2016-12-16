@@ -450,3 +450,18 @@ func (myStacktracerError) GetStacktrace() *raven.Stacktrace {
 		},
 	}
 }
+
+func TestConvertStackTrace(t *testing.T) {
+	hook := SentryHook{}
+	expected := raven.NewStacktrace(0, 0, nil)
+	st := pkgerrors.New("-").(pkgErrorStackTracer).StackTrace()
+	ravenSt := hook.convertStackTrace(st)
+
+	// Obscure the line numbes, so DeepEqual doesn't fail erroneously
+	for _, frame := range append(expected.Frames, ravenSt.Frames...) {
+		frame.Lineno = 999
+	}
+	if !reflect.DeepEqual(ravenSt, expected) {
+		t.Error("stack traces differ")
+	}
+}
