@@ -297,6 +297,11 @@ func (hook *SentryHook) convertStackTrace(st errors.StackTrace) *raven.Stacktrac
 			frames = append(frames, frame)
 		}
 	}
+
+	// Sentry wants the frames with the oldest first, so reverse them
+	for i, j := 0, len(frames)-1; i < j; i, j = i+1, j-1 {
+		frames[i], frames[j] = frames[j], frames[i]
+	}
 	return &raven.Stacktrace{Frames: frames}
 }
 
