@@ -272,7 +272,7 @@ func TestSentryStacktrace(t *testing.T) {
 		if len(frames) != expectedFrameCount {
 			t.Errorf("Expected %d frames, got %d", expectedFrameCount, len(frames))
 		}
-		if frames[0].Filename != expectedPkgErrorsStackTraceFilename {
+		if !strings.HasSuffix(frames[0].Filename, expectedPkgErrorsStackTraceFilename) {
 			t.Error("Stacktrace should be taken from err if it implements the pkgErrorStackTracer interface")
 		}
 	})
