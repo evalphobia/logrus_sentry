@@ -36,8 +36,9 @@ type SentryHook struct {
 	// consider the message correctly sent
 	Timeout                 time.Duration
 	StacktraceConfiguration StackTraceConfiguration
-	// If Retries is non-zero, packets will be resent in case of a 429 error,
-	// up to this many times, or until the timeout is reached.
+	// If Retries is non-zero, packets will be resent in case of a 429 error
+	// (too many requests) up to this many times, or until the timeout is
+	// reached.
 	Retries uint8
 
 	client *raven.Client
@@ -247,13 +248,7 @@ func (hook *SentryHook) Flush() {
 }
 
 func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
-	_, errCh := hook.client.Capture(packet, nil)
-	cases := []reflect.SelectCase{
-		reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(errCh),
-		},
-	}
+	cases := make([]reflect.SelectCase, 1, 2)
 	timeout := hook.Timeout
 	if timeout > 0 {
 		cases = append(cases, reflect.SelectCase{
@@ -261,15 +256,33 @@ func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
 			Chan: reflect.ValueOf(time.After(timeout)),
 		})
 	}
-	chosen, recv, _ := reflect.Select(cases)
-	switch chosen {
-	case 0:
-		err, _ := recv.Interface().(error)
-		return err
-	case 1:
-		return fmt.Errorf("no response from sentry server in %s", timeout)
+	var err error
+	for i := 0; i < int(hook.Retries)+1; i++ {
+		_, errCh := hook.client.Capture(packet, nil)
+		cases[0] = reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(errCh),
+		}
+
+		chosen, recv, _ := reflect.Select(cases)
+		switch chosen {
+		case 0:
+			var ok bool
+			err, ok = recv.Interface().(error)
+			if !ok {
+				// Success!
+				return nil
+			}
+			if err.Error() == "raven: got http status 429" { // Too many requests
+				continue
+			}
+			return err
+		case 1:
+			return fmt.Errorf("no response from sentry server in %s", timeout)
+		}
 	}
-	return nil
+	// Retries count exceeded, return the error
+	return err
 }
 
 func (hook *SentryHook) findStacktraceAndCause(err error) (*raven.Stacktrace, error) {
