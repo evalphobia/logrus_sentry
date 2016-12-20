@@ -3,6 +3,7 @@ package logrus_sentry
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -35,6 +36,9 @@ type SentryHook struct {
 	// consider the message correctly sent
 	Timeout                 time.Duration
 	StacktraceConfiguration StackTraceConfiguration
+	// If Retries is non-zero, packets will be resent in case of a 429 error,
+	// up to this many times, or until the timeout is reached.
+	Retries uint8
 
 	client *raven.Client
 	levels []logrus.Level
@@ -244,15 +248,26 @@ func (hook *SentryHook) Flush() {
 
 func (hook *SentryHook) sendPacket(packet *raven.Packet) error {
 	_, errCh := hook.client.Capture(packet, nil)
+	cases := []reflect.SelectCase{
+		reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(errCh),
+		},
+	}
 	timeout := hook.Timeout
-	if timeout != 0 {
-		timeoutCh := time.After(timeout)
-		select {
-		case err := <-errCh:
-			return err
-		case <-timeoutCh:
-			return fmt.Errorf("no response from sentry server in %s", timeout)
-		}
+	if timeout > 0 {
+		cases = append(cases, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(time.After(timeout)),
+		})
+	}
+	chosen, recv, _ := reflect.Select(cases)
+	switch chosen {
+	case 0:
+		err, _ := recv.Interface().(error)
+		return err
+	case 1:
+		return fmt.Errorf("no response from sentry server in %s", timeout)
 	}
 	return nil
 }
