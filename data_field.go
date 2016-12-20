@@ -74,6 +74,10 @@ func (d *dataField) getHTTPRequest() (*raven.Http, bool) {
 		d.omitList[fieldHTTPRequest] = struct{}{}
 		return raven.NewHttp(req), true
 	}
+	if req, ok := d.data[fieldHTTPRequest].(*raven.Http); ok {
+		d.omitList[fieldHTTPRequest] = struct{}{}
+		return req, true
+	}
 	return nil, false
 }
 

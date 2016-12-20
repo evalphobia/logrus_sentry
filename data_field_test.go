@@ -237,6 +237,8 @@ func TestGetHTTPRequest(t *testing.T) {
 		{"http_request", 1, false, "invalid value type"},
 		{"http_request", true, false, "invalid value type"},
 		{"http_request", struct{}{}, false, "invalid value type"},
+		{"http_request", raven.NewHttp(httpReq), true, "valid raven http_request"},
+		{"http_request", raven.Http{}, false, "invalid raven http_request"},
 	}
 
 	for _, tt := range tests {
