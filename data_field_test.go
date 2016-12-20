@@ -221,14 +221,17 @@ func TestGetError(t *testing.T) {
 func TestGetHTTPRequest(t *testing.T) {
 	assert := assert.New(t)
 
+	httpReq, _ := http.NewRequest("GET", "/", nil)
+	ravenReq := raven.NewHttp(httpReq)
+
 	tests := []struct {
 		key         string
 		value       interface{}
 		expected    bool
 		description string
 	}{
-		{"http_request", &http.Request{}, true, "valid http_request"},
-		{"not_http_request", &http.Request{}, false, "invalid key"},
+		{"http_request", httpReq, true, "valid http_request"},
+		{"not_http_request", httpReq, false, "invalid key"},
 		{"http_request", http.Request{}, false, "invalid value type"},
 		{"http_request", "test_http_request", false, "invalid value type"},
 		{"http_request", 1, false, "invalid value type"},
@@ -246,7 +249,7 @@ func TestGetHTTPRequest(t *testing.T) {
 		req, ok := df.getHTTPRequest()
 		assert.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(tt.value, req, target)
+			assert.Equal(ravenReq, req, target)
 			assert.True(df.isOmit("http_request"), "`http_request` should be in omitList")
 		} else {
 			assert.False(df.isOmit("http_request"), "`http_request` should not be in omitList")
