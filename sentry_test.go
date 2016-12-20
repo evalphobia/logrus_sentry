@@ -450,3 +450,48 @@ func (myStacktracerError) GetStacktrace() *raven.Stacktrace {
 		},
 	}
 }
+
+func TestRetries(t *testing.T) {
+	failures := 8
+	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// This HTTP handler will respond with a 429 3 times, then success,
+		// ignoring the request otherwise.
+		defer req.Body.Close()
+		if failures > 0 {
+			rw.WriteHeader(429) // Too many requests
+			failures--
+			return
+		}
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer s.Close()
+	fragments := strings.SplitN(s.URL, "://", 2)
+	dsn := fmt.Sprintf(
+		"%s://public:secret@%s/sentry/project-id",
+		fragments[0],
+		fragments[1],
+	)
+	logger := getTestLogger()
+
+	hook, err := NewSentryHook(dsn, []logrus.Level{
+		logrus.ErrorLevel,
+	})
+
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	logger.Hooks.Add(hook)
+	hook.Retries = 5
+	if err := hook.Fire(&logrus.Entry{}); err == nil {
+		t.Errorf("Expected failure")
+	}
+	if failures != 2 { // Ensure the failure counter was properly decremented
+		t.Errorf("Expected failure counter to be 3, got %d", failures)
+	}
+	if err := hook.Fire(&logrus.Entry{}); err != nil {
+		t.Errorf("Expected success, got: %s", err)
+	}
+	if failures != 0 { // Ensure the failure counter was properly decremented
+		t.Errorf("Expected failure counter to be 3, got %d", failures)
+	}
+}
