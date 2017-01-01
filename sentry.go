@@ -178,7 +178,7 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 		packet.Tags = tags
 	}
 	if req, ok := df.getHTTPRequest(); ok {
-		packet.Interfaces = append(packet.Interfaces, raven.NewHttp(req))
+		packet.Interfaces = append(packet.Interfaces, req)
 	}
 	if user, ok := df.getUser(); ok {
 		packet.Interfaces = append(packet.Interfaces, user)
