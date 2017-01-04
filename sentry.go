@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/getsentry/raven-go"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
