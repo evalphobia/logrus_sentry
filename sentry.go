@@ -189,11 +189,11 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	if stConfig.Enable && entry.Level <= stConfig.Level {
 		if err, ok := df.getError(); ok {
 			var currentStacktrace *raven.Stacktrace
-			err := errors.Cause(err)
 			currentStacktrace = hook.findStacktrace(err)
 			if currentStacktrace == nil {
 				currentStacktrace = raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			}
+			err := errors.Cause(err)
 			exc := raven.NewException(err, currentStacktrace)
 			packet.Interfaces = append(packet.Interfaces, exc)
 			packet.Culprit = err.Error()
