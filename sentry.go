@@ -177,6 +177,9 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	if tags, ok := df.getTags(); ok {
 		packet.Tags = tags
 	}
+	if fingerprint, ok := df.getFingerprint(); ok {
+		packet.Fingerprint = fingerprint
+	}
 	if req, ok := df.getHTTPRequest(); ok {
 		packet.Interfaces = append(packet.Interfaces, req)
 	}
