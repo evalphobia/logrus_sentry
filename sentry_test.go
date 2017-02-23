@@ -222,8 +222,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 199 //this should be the line number of the previous line
-
+		expectedLineno := 224 //this should be the line number of the previous line
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
 		if stacktraceSize == 0 {
