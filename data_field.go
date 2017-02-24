@@ -9,6 +9,7 @@ import (
 
 const (
 	fieldEventID     = "event_id"
+	fieldFingerprint = "fingerprint"
 	fieldLogger      = "logger"
 	fieldServerName  = "server_name"
 	fieldTags        = "tags"
@@ -57,6 +58,14 @@ func (d *dataField) getTags() (raven.Tags, bool) {
 	if tags, ok := d.data[fieldTags].(raven.Tags); ok {
 		d.omitList[fieldTags] = struct{}{}
 		return tags, true
+	}
+	return nil, false
+}
+
+func (d *dataField) getFingerprint() ([]string, bool) {
+	if fingerprint, ok := d.data[fieldFingerprint].([]string); ok {
+		d.omitList[fieldFingerprint] = struct{}{}
+		return fingerprint, true
 	}
 	return nil, false
 }

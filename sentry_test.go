@@ -170,7 +170,32 @@ func TestSentryTags(t *testing.T) {
 			},
 		}
 		if !reflect.DeepEqual(packet.Tags, expected) {
-			t.Errorf("message should have been %s, was %s", message, packet.Message)
+			t.Errorf("tags should have been %+v, was %+v", expected, packet.Tags)
+		}
+	})
+}
+
+func TestSentryFingerprint(t *testing.T) {
+	WithTestDSN(t, func(dsn string, pch <-chan *resultPacket) {
+		logger := getTestLogger()
+		levels := []logrus.Level{
+			logrus.ErrorLevel,
+		}
+		fingerprint := []string{"fingerprint"}
+
+		hook, err := NewSentryHook(dsn, levels)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		logger.Hooks.Add(hook)
+
+		logger.WithFields(logrus.Fields{
+			"fingerprint": fingerprint,
+		}).Error(message)
+		packet := <-pch
+		if !reflect.DeepEqual(packet.Fingerprint, fingerprint) {
+			t.Errorf("fingerprint should have been %v, was %v", fingerprint, packet.Fingerprint)
 		}
 	})
 }
@@ -197,8 +222,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 199 //this should be the line number of the previous line
-
+		expectedLineno := 224 //this should be the line number of the previous line
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
 		if stacktraceSize == 0 {
