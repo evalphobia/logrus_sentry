@@ -144,6 +144,32 @@ func TestSentryWithClient(t *testing.T) {
 	})
 }
 
+func TestSentryWithClientAndError(t *testing.T) {
+	WithTestDSN(t, func(dsn string, pch <-chan *resultPacket) {
+		logger := getTestLogger()
+
+		client, _ := raven.New(dsn)
+
+		hook, err := NewWithClientSentryHook(client, []logrus.Level{
+			logrus.ErrorLevel,
+		})
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		logger.Hooks.Add(hook)
+
+		errorMsg := "error message"
+		logger.WithError(errors.New(errorMsg)).Error(message)
+		packet := <-pch
+		if packet.Message != message {
+			t.Errorf("message should have been %s, was %s", message, packet.Message)
+		}
+		if packet.Culprit != errorMsg {
+			t.Errorf("culprit should have been %s, was %s", errorMsg, packet.Culprit)
+		}
+	})
+}
+
 func TestSentryTags(t *testing.T) {
 	WithTestDSN(t, func(dsn string, pch <-chan *resultPacket) {
 		logger := getTestLogger()
@@ -222,7 +248,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 224 //this should be the line number of the previous line
+		expectedLineno := 250 //this should be the line number of the previous line
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
 		if stacktraceSize == 0 {
