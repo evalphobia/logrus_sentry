@@ -325,6 +325,16 @@ func TestSentryStacktrace(t *testing.T) {
 		if !strings.HasSuffix(frames[0].Filename, expectedPkgErrorsStackTraceFilename) {
 			t.Error("Stacktrace should be taken from err if it implements the pkgErrorStackTracer interface")
 		}
+
+		// zero stack frames
+		defer func() {
+			if err := recover(); err != nil {
+				t.Error("Zero stack frames should not cause panic")
+			}
+		}()
+		hook.StacktraceConfiguration.Skip = 1000
+		logger.Error(message)
+		<-pch // check panic
 	})
 }
 
