@@ -204,6 +204,11 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 			currentStacktrace := raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			packet.Interfaces = append(packet.Interfaces, currentStacktrace)
 		}
+	} else {
+		// set the culprit even when the stack trace is disabled, as long as we have an error
+		if err, ok := df.getError(); ok {
+			packet.Culprit = err.Error()
+		}
 	}
 
 	// set other fields
