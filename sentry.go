@@ -199,7 +199,8 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 			err := errors.Cause(err)
 			exc := raven.NewException(err, currentStacktrace)
 			packet.Interfaces = append(packet.Interfaces, exc)
-			packet.Culprit = err.Error()
+			packet.Culprit = entry.Message
+			packet.Message = err.Error()
 		} else {
 			currentStacktrace := raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			if currentStacktrace != nil {
