@@ -300,7 +300,7 @@ func TestSentryStacktrace(t *testing.T) {
 		if packet.Exception.Stacktrace != nil {
 			frames = packet.Exception.Stacktrace.Frames
 		}
-		expectedCulprit := "myStacktracerError!"
+		expectedCulprit := "wrapped: myStacktracerError!"
 		if packet.Culprit != expectedCulprit {
 			t.Errorf("Expected culprit of '%s', got '%s'", expectedCulprit, packet.Culprit)
 		}
