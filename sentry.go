@@ -75,6 +75,8 @@ type StackTraceConfiguration struct {
 	// if the stack frame's package matches one of these prefixes
 	// sentry will identify the stack frame as "in_app"
 	InAppPrefixes []string
+	// whether sending exception type should be enabled.
+	SendExceptionType bool
 }
 
 // NewSentryHook creates a hook to be added to an instance of logger
@@ -105,11 +107,12 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 	return &SentryHook{
 		Timeout: 100 * time.Millisecond,
 		StacktraceConfiguration: StackTraceConfiguration{
-			Enable:        false,
-			Level:         logrus.ErrorLevel,
-			Skip:          5,
-			Context:       0,
-			InAppPrefixes: nil,
+			Enable:            false,
+			Level:             logrus.ErrorLevel,
+			Skip:              5,
+			Context:           0,
+			InAppPrefixes:     nil,
+			SendExceptionType: true,
 		},
 		client:       client,
 		levels:       levels,
@@ -198,6 +201,9 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 			}
 			err := errors.Cause(err)
 			exc := raven.NewException(err, currentStacktrace)
+			if !stConfig.SendExceptionType {
+				exc.Type = ""
+			}
 			packet.Interfaces = append(packet.Interfaces, exc)
 			packet.Culprit = err.Error()
 		} else {
