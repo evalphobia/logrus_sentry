@@ -9,7 +9,7 @@ import (
 
 	"github.com/getsentry/raven-go"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
 var (
