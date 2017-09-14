@@ -1,4 +1,4 @@
-package logrus_sentry
+package logrussentry
 
 import (
 	"compress/zlib"
@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/getsentry/raven-go"
+	"github.com/kiip/logrus"
 	pkgerrors "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -255,7 +255,7 @@ func TestSentryStacktrace(t *testing.T) {
 			t.Error("Stacktrace should not be empty")
 		}
 		lastFrame := packet.Stacktrace.Frames[stacktraceSize-1]
-		expectedSuffix := "logrus_sentry/sentry_test.go"
+		expectedSuffix := "logrussentry/sentry_test.go"
 		if !strings.HasSuffix(lastFrame.Filename, expectedSuffix) {
 			t.Errorf("File name should have ended with %s, was %s", expectedSuffix, lastFrame.Filename)
 		}
@@ -266,7 +266,7 @@ func TestSentryStacktrace(t *testing.T) {
 			t.Error("Frame should not be identified as in_app without prefixes")
 		}
 
-		hook.StacktraceConfiguration.InAppPrefixes = []string{"github.com/sirupsen/logrus"}
+		hook.StacktraceConfiguration.InAppPrefixes = []string{"github.com/kiip/logrus"}
 		hook.StacktraceConfiguration.Context = 2
 		hook.StacktraceConfiguration.Skip = 2
 
@@ -277,7 +277,7 @@ func TestSentryStacktrace(t *testing.T) {
 			t.Error("Stacktrace should not be empty")
 		}
 		lastFrame = packet.Stacktrace.Frames[stacktraceSize-1]
-		expectedFilename := "github.com/sirupsen/logrus/entry.go"
+		expectedFilename := "github.com/kiip/logrus/entry.go"
 		if lastFrame.Filename != expectedFilename {
 			t.Errorf("File name should have been %s, was %s", expectedFilename, lastFrame.Filename)
 		}

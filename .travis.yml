@@ -1,14 +1,8 @@
 sudo: false
 language: go
 go:
-  - 1.4
-  - 1.5
-  - 1.6
-  - 1.7
-  - tip
-matrix:
-  allow_failures:
-    - go: tip
+  - 1.9
+
 before_install:
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
