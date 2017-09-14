@@ -1,7 +1,7 @@
 # Sentry Hook for Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:" />
 
 
-[![Build Status](https://travis-ci.org/evalphobia/logrus_sentry.svg?branch=master)](https://travis-ci.org/evalphobia/logrus_sentry)  [![Coverage Status](https://coveralls.io/repos/evalphobia/logrus_sentry/badge.svg?branch=master&service=github)](https://coveralls.io/github/evalphobia/logrus_sentry?branch=master) [![GoDoc](https://godoc.org/github.com/evalphobia/logrus_sentry?status.svg)](https://godoc.org/github.com/evalphobia/logrus_sentry)
+[![Build Status](https://travis-ci.org/kiip/logrussentry.svg?branch=master)](https://travis-ci.org/kiip/logrussentry)  [![Coverage Status](https://coveralls.io/repos/github/kiip/logrussentry/badge.svg?branch=master)](https://coveralls.io/github/kiip/logrussentry?branch=master) [![GoDoc](https://godoc.org/github.com/kiip/logrussentry?status.svg)](https://godoc.org/github.com/kiip/logrussentry)
 
 [Sentry](https://getsentry.com) provides both self-hosted and hosted
 solutions for exception tracking.
@@ -17,12 +17,12 @@ Every sentry application defined on the server gets a different
 ```go
 import (
   "github.com/kiip/logrus"
-  "github.com/evalphobia/logrus_sentry"
+  "github.com/kiip/logrussentry"
 )
 
 func main() {
   log       := logrus.New()
-  hook, err := logrus_sentry.NewSentryHook(YOUR_DSN, []logrus.Level{
+  hook, err := logrussentry.NewSentryHook(YOUR_DSN, []logrus.Level{
     logrus.PanicLevel,
     logrus.FatalLevel,
     logrus.ErrorLevel,
@@ -45,7 +45,7 @@ levels := []logrus.Level{
   logrus.FatalLevel,
   logrus.ErrorLevel,
 }
-hook, err := logrus_sentry.NewWithTagsSentryHook(YOUR_DSN, tags, levels)
+hook, err := logrussentry.NewWithTagsSentryHook(YOUR_DSN, tags, levels)
 
 ```
 
@@ -55,7 +55,7 @@ the `NewWithClientSentryHook` constructor:
 ```go
 import (
   "github.com/kiip/logrus"
-  "github.com/evalphobia/logrus_sentry"
+  "github.com/kiip/logrussentry"
   "github.com/getsentry/raven-go"
 )
 
@@ -67,7 +67,7 @@ func main() {
       log.Fatal(err)
   }
 
-  hook, err := logrus_sentry.NewWithClientSentryHook(client, []logrus.Level{
+  hook, err := logrussentry.NewWithClientSentryHook(client, []logrus.Level{
     logrus.PanicLevel,
     logrus.FatalLevel,
     logrus.ErrorLevel,
@@ -116,7 +116,7 @@ The SentryHook has a default timeout of `100 milliseconds` when created
 with a call to `NewSentryHook`. This can be changed by assigning a value to the `Timeout` field:
 
 ```go
-hook, _ := logrus_sentry.NewSentryHook(...)
+hook, _ := logrussentry.NewSentryHook(...)
 hook.Timeout = 20*time.Second
 ```
 
@@ -126,7 +126,7 @@ By default the hook will not send any stacktraces. However, this can be enabled
 with:
 
 ```go
-hook, _ := logrus_sentry.NewSentryHook(...)
+hook, _ := logrussentry.NewSentryHook(...)
 hook.StacktraceConfiguration.Enable = true
 ```
 

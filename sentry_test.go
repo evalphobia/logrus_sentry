@@ -1,4 +1,4 @@
-package logrus_sentry
+package logrussentry
 
 import (
 	"compress/zlib"
@@ -255,7 +255,7 @@ func TestSentryStacktrace(t *testing.T) {
 			t.Error("Stacktrace should not be empty")
 		}
 		lastFrame := packet.Stacktrace.Frames[stacktraceSize-1]
-		expectedSuffix := "logrus_sentry/sentry_test.go"
+		expectedSuffix := "logrussentry/sentry_test.go"
 		if !strings.HasSuffix(lastFrame.Filename, expectedSuffix) {
 			t.Errorf("File name should have ended with %s, was %s", expectedSuffix, lastFrame.Filename)
 		}
