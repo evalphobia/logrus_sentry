@@ -1,4 +1,4 @@
-package logrus_sentry
+package logrussentry
 
 import (
 	"encoding/json"
@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/getsentry/raven-go"
+	"github.com/kiip/logrus"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 var (

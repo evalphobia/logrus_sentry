@@ -1,4 +1,4 @@
-package logrus_sentry
+package logrussentry
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/kiip/logrus"
 )
 
 func TestParallelLogging(t *testing.T) {

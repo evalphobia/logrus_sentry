@@ -1,10 +1,10 @@
-package logrus_sentry
+package logrussentry
 
 import (
 	"net/http"
 
 	"github.com/getsentry/raven-go"
-	"github.com/sirupsen/logrus"
+	"github.com/kiip/logrus"
 )
 
 const (
