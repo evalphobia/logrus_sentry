@@ -40,6 +40,7 @@ type SentryHook struct {
 	client *raven.Client
 	levels []logrus.Level
 
+	serverName   string
 	ignoreFields map[string]struct{}
 	extraFilters map[string]func(interface{}) interface{}
 
@@ -166,6 +167,9 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	df := newDataField(entry.Data)
 
 	// set special fields
+	if hook.serverName != "" {
+		packet.ServerName = hook.serverName
+	}
 	if logger, ok := df.getLogger(); ok {
 		packet.Logger = logger
 	}
@@ -324,6 +328,11 @@ func (hook *SentryHook) SetRelease(release string) {
 // SetEnvironment sets environment tag.
 func (hook *SentryHook) SetEnvironment(environment string) {
 	hook.client.SetEnvironment(environment)
+}
+
+// SetServerName sets server_name tag.
+func (hook *SentryHook) SetServerName(serverName string) {
+	hook.serverName = serverName
 }
 
 // AddIgnore adds field name to ignore.
