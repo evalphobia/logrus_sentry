@@ -79,6 +79,8 @@ type StackTraceConfiguration struct {
 	InAppPrefixes []string
 	// whether sending exception type should be enabled.
 	SendExceptionType bool
+	// whether sending exception type should be enabled.
+	SwitchExceptionTypeAndMessage bool
 }
 
 // NewSentryHook creates a hook to be added to an instance of logger
@@ -204,6 +206,9 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 			exc := raven.NewException(errors.Cause(err), currentStacktrace)
 			if !stConfig.SendExceptionType {
 				exc.Type = ""
+			}
+			if stConfig.SwitchExceptionTypeAndMessage {
+				exc.Type, exc.Value = exc.Value, exc.Type
 			}
 			packet.Interfaces = append(packet.Interfaces, exc)
 			packet.Culprit = err.Error()
