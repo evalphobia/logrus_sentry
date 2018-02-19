@@ -79,7 +79,7 @@ type StackTraceConfiguration struct {
 	InAppPrefixes []string
 	// whether sending exception type should be enabled.
 	SendExceptionType bool
-	// whether sending exception type should be enabled.
+	// whether the exception type and message should be switched.
 	SwitchExceptionTypeAndMessage bool
 }
 
