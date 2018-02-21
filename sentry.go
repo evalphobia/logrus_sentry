@@ -208,10 +208,12 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 				exc.Type = ""
 			}
 			if stConfig.SwitchExceptionTypeAndMessage {
-				exc.Type, exc.Value = exc.Value, exc.Type
+				packet.Interfaces = append(packet.Interfaces, currentStacktrace)
+				packet.Culprit = exc.Type + ": " + currentStacktrace.Culprit()
+			} else {
+				packet.Interfaces = append(packet.Interfaces, exc)
+				packet.Culprit = err.Error()
 			}
-			packet.Interfaces = append(packet.Interfaces, exc)
-			packet.Culprit = err.Error()
 		} else {
 			currentStacktrace := raven.NewStacktrace(stConfig.Skip, stConfig.Context, stConfig.InAppPrefixes)
 			if currentStacktrace != nil {
