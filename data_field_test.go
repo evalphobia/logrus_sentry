@@ -44,10 +44,10 @@ func TestIsOmit(t *testing.T) {
 	assert := assert.New(t)
 
 	omitList := map[string]struct{}{
-		"key_1": struct{}{},
-		"key_2": struct{}{},
-		"key_3": struct{}{},
-		"key_4": struct{}{},
+		"key_1": {},
+		"key_2": {},
+		"key_3": {},
+		"key_4": {},
 	}
 
 	tests := []struct {
