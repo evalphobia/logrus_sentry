@@ -1,4 +1,4 @@
-package logrus_sentry
+package logrussentry
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/getsentry/raven-go"
-	"github.com/sirupsen/logrus"
+	"github.com/kiip/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
