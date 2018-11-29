@@ -13,7 +13,7 @@ import (
 )
 
 func TestLen(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		fieldSize int
@@ -36,18 +36,18 @@ func TestLen(t *testing.T) {
 		df := dataField{
 			data: fields,
 		}
-		assert.Equal(tt.fieldSize, df.len(), "dataField.Len() should equal fieldSize", target)
+		a.Equal(tt.fieldSize, df.len(), "dataField.Len() should equal fieldSize", target)
 	}
 }
 
 func TestIsOmit(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	omitList := map[string]struct{}{
-		"key_1": struct{}{},
-		"key_2": struct{}{},
-		"key_3": struct{}{},
-		"key_4": struct{}{},
+		"key_1": {},
+		"key_2": {},
+		"key_3": {},
+		"key_4": {},
 	}
 
 	tests := []struct {
@@ -71,12 +71,12 @@ func TestIsOmit(t *testing.T) {
 		df := dataField{
 			omitList: omitList,
 		}
-		assert.Equal(tt.expected, df.isOmit(tt.key), target)
+		a.Equal(tt.expected, df.isOmit(tt.key), target)
 	}
 }
 
 func TestGetLogger(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -100,18 +100,18 @@ func TestGetLogger(t *testing.T) {
 
 		df := newDataField(fields)
 		logger, ok := df.getLogger()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(tt.value, logger, target)
-			assert.True(df.isOmit("logger"), "`logger` should be in omitList")
+			a.Equal(tt.value, logger, target)
+			a.True(df.isOmit("logger"), "`logger` should be in omitList")
 		} else {
-			assert.False(df.isOmit("logger"), "`logger` should not be in omitList")
+			a.False(df.isOmit("logger"), "`logger` should not be in omitList")
 		}
 	}
 }
 
 func TestGetServerName(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -135,18 +135,18 @@ func TestGetServerName(t *testing.T) {
 
 		df := newDataField(fields)
 		serverName, ok := df.getServerName()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(tt.value, serverName, target)
-			assert.True(df.isOmit("server_name"), "`server_name` should be in omitList")
+			a.Equal(tt.value, serverName, target)
+			a.True(df.isOmit("server_name"), "`server_name` should be in omitList")
 		} else {
-			assert.False(df.isOmit("server_name"), "`server_name` should not be in omitList")
+			a.False(df.isOmit("server_name"), "`server_name` should not be in omitList")
 		}
 	}
 }
 
 func TestGetTags(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -172,18 +172,18 @@ func TestGetTags(t *testing.T) {
 
 		df := newDataField(fields)
 		tags, ok := df.getTags()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(tt.value, tags, target)
-			assert.True(df.isOmit("tags"), "`tags` should be in omitList")
+			a.Equal(tt.value, tags, target)
+			a.True(df.isOmit("tags"), "`tags` should be in omitList")
 		} else {
-			assert.False(df.isOmit("tags"), "`tags` should not be in omitList")
+			a.False(df.isOmit("tags"), "`tags` should not be in omitList")
 		}
 	}
 }
 
 func TestGetFingerprint(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -209,18 +209,18 @@ func TestGetFingerprint(t *testing.T) {
 
 		df := newDataField(fields)
 		fingerprint, ok := df.getFingerprint()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(tt.value, fingerprint, target)
-			assert.True(df.isOmit("fingerprint"), "`fingerprint` should be in omitList")
+			a.Equal(tt.value, fingerprint, target)
+			a.True(df.isOmit("fingerprint"), "`fingerprint` should be in omitList")
 		} else {
-			assert.False(df.isOmit("fingerprint"), "`fingerprint` should not be in omitList")
+			a.False(df.isOmit("fingerprint"), "`fingerprint` should not be in omitList")
 		}
 	}
 }
 
 func TestGetError(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -245,18 +245,18 @@ func TestGetError(t *testing.T) {
 
 		df := newDataField(fields)
 		err, ok := df.getError()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(tt.value, err, target)
-			assert.True(df.isOmit("error"), "`error` should be in omitList")
+			a.Equal(tt.value, err, target)
+			a.True(df.isOmit("error"), "`error` should be in omitList")
 		} else {
-			assert.False(df.isOmit("error"), "`error` should not be in omitList")
+			a.False(df.isOmit("error"), "`error` should not be in omitList")
 		}
 	}
 }
 
 func TestGetHTTPRequest(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	httpReq, _ := http.NewRequest("GET", "/", nil)
 	ravenReq := raven.NewHttp(httpReq)
@@ -286,18 +286,18 @@ func TestGetHTTPRequest(t *testing.T) {
 
 		df := newDataField(fields)
 		req, ok := df.getHTTPRequest()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal(ravenReq, req, target)
-			assert.True(df.isOmit("http_request"), "`http_request` should be in omitList")
+			a.Equal(ravenReq, req, target)
+			a.True(df.isOmit("http_request"), "`http_request` should be in omitList")
 		} else {
-			assert.False(df.isOmit("http_request"), "`http_request` should not be in omitList")
+			a.False(df.isOmit("http_request"), "`http_request` should not be in omitList")
 		}
 	}
 }
 
 func TestGetEventID(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -325,18 +325,18 @@ func TestGetEventID(t *testing.T) {
 
 		df := newDataField(fields)
 		eventID, ok := df.getEventID()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.Equal("ffffffffffffffffffffffffffffffff", eventID, target)
-			assert.True(df.isOmit("event_id"), "`event_id` should be in omitList")
+			a.Equal("ffffffffffffffffffffffffffffffff", eventID, target)
+			a.True(df.isOmit("event_id"), "`event_id` should be in omitList")
 		} else {
-			assert.False(df.isOmit("event_id"), "`event_id` should not be in omitList")
+			a.False(df.isOmit("event_id"), "`event_id` should not be in omitList")
 		}
 	}
 }
 
 func TestGetUser(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		key         string
@@ -361,18 +361,18 @@ func TestGetUser(t *testing.T) {
 
 		df := newDataField(fields)
 		user, ok := df.getUser()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.IsType(&raven.User{}, user, target)
-			assert.True(df.isOmit("user"), "`user` should be in omitList")
+			a.IsType(&raven.User{}, user, target)
+			a.True(df.isOmit("user"), "`user` should be in omitList")
 		} else {
-			assert.False(df.isOmit("user"), "`user` should not be in omitList")
+			a.False(df.isOmit("user"), "`user` should not be in omitList")
 		}
 	}
 }
 
 func TestGetUserFromString(t *testing.T) {
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	tests := []struct {
 		data        map[string]interface{}
@@ -408,9 +408,9 @@ func TestGetUserFromString(t *testing.T) {
 
 		df := newDataField(fields)
 		user, ok := df.getUser()
-		assert.Equal(tt.expected, ok, target)
+		a.Equal(tt.expected, ok, target)
 		if ok {
-			assert.IsType(&raven.User{}, user, target)
+			a.IsType(&raven.User{}, user, target)
 		}
 	}
 }
