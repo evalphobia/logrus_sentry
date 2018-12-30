@@ -72,30 +72,6 @@ func WithTestDSN(t *testing.T, tf func(string, <-chan *resultPacket)) {
 	tf(dsn, pch)
 }
 
-func TestServerName(t *testing.T) {
-	WithTestDSN(t, func(dsn string, pch <-chan *resultPacket) {
-		logger := getTestLogger()
-
-		hook, err := NewSentryHook(dsn, []logrus.Level{
-			logrus.ErrorLevel,
-		})
-		hook.SetServerName(server_name)
-
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-		logger.Hooks.Add(hook)
-
-		logger.Error(message)
-
-		packet := <-pch
-
-		if packet.ServerName != server_name {
-			t.Errorf("server_name should have been %s, was %s", server_name, packet.ServerName)
-		}
-	})
-}
-
 func TestSpecialFields(t *testing.T) {
 	WithTestDSN(t, func(dsn string, pch <-chan *resultPacket) {
 		logger := getTestLogger()
@@ -272,7 +248,7 @@ func TestSentryStacktrace(t *testing.T) {
 		hook.StacktraceConfiguration.Enable = true
 
 		logger.Error(message) // this is the call that the last frame of stacktrace should capture
-		expectedLineno := 274 //this should be the line number of the previous line
+		expectedLineno := 250 //this should be the line number of the previous line
 		packet = <-pch
 		stacktraceSize = len(packet.Stacktrace.Frames)
 		if stacktraceSize == 0 {
