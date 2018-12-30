@@ -20,8 +20,8 @@ func (hook *SentryHook) SetHttpContext(h *raven.Http) {
 }
 
 // SetIgnoreErrors sets ignoreErrorsRegexp.
-func (hook *SentryHook) SetIgnoreErrors(errs ...string) {
-	hook.client.SetIgnoreErrors(errs)
+func (hook *SentryHook) SetIgnoreErrors(errs ...string) error {
+	return hook.client.SetIgnoreErrors(errs)
 }
 
 // SetIncludePaths sets includePaths.
@@ -35,8 +35,8 @@ func (hook *SentryHook) SetRelease(release string) {
 }
 
 // SetSampleRate sets sampling rate.
-func (hook *SentryHook) SetSampleRate(rate float32) {
-	hook.client.SetSampleRate(rate)
+func (hook *SentryHook) SetSampleRate(rate float32) error {
+	return hook.client.SetSampleRate(rate)
 }
 
 // SetTagsContext sets tags.
