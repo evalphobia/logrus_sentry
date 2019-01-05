@@ -113,7 +113,7 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 		StacktraceConfiguration: StackTraceConfiguration{
 			Enable:            false,
 			Level:             logrus.ErrorLevel,
-			Skip:              5,
+			Skip:              6,
 			Context:           0,
 			InAppPrefixes:     nil,
 			SendExceptionType: true,
