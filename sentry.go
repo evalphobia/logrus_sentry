@@ -3,7 +3,6 @@ package logrus_sentry
 import (
 	"encoding/json"
 	"fmt"
-	"runtime"
 	"sync"
 	"time"
 
@@ -114,7 +113,7 @@ func NewWithClientSentryHook(client *raven.Client, levels []logrus.Level) (*Sent
 		StacktraceConfiguration: StackTraceConfiguration{
 			Enable:            false,
 			Level:             logrus.ErrorLevel,
-			Skip:              5,
+			Skip:              6,
 			Context:           0,
 			InAppPrefixes:     nil,
 			SendExceptionType: true,
@@ -310,11 +309,9 @@ func (hook *SentryHook) convertStackTrace(st errors.StackTrace) *raven.Stacktrac
 	stConfig := &hook.StacktraceConfiguration
 	stFrames := []errors.Frame(st)
 	frames := make([]*raven.StacktraceFrame, 0, len(stFrames))
-	for i := range stFrames {
-		pc := uintptr(stFrames[i])
-		fn := runtime.FuncForPC(pc)
-		file, line := fn.FileLine(pc)
-		frame := raven.NewStacktraceFrame(pc, fn.Name(), file, line, stConfig.Context, stConfig.InAppPrefixes)
+	for _, stFrame := range stFrames {
+		frame := raven.NewStacktraceFrame(stFrame.PC, stFrame.Func.Name(), stFrame.File, stFrame.Line,
+			stConfig.Context, stConfig.InAppPrefixes)
 		if frame != nil {
 			frames = append(frames, frame)
 		}
