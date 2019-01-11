@@ -18,6 +18,7 @@ import (
 	"github.com/getsentry/raven-go"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -412,4 +413,43 @@ func TestConvertStackTrace(t *testing.T) {
 	if !reflect.DeepEqual(ravenSt, expected) {
 		t.Error("stack traces differ")
 	}
+}
+
+func TestErrorHandler(t *testing.T) {
+	a := assert.New(t)
+
+	s, dsn := httptestNewServer(func(rw http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
+		rw.WriteHeader(400)
+	})
+	defer s.Close()
+
+	hook, err := NewSentryHook(dsn, []logrus.Level{
+		logrus.ErrorLevel,
+	})
+	a.NoError(err, "NewSentryHook should be no error")
+
+	logger := getTestLogger()
+	logger.Hooks.Add(hook)
+
+	hook.AddErrorHandler(func(e *logrus.Entry, err error) {
+		a.Error(err, "ErrorHandler should capture error")
+		a.Contains(err.Error(), "raven: got http status 400")
+	})
+
+	err = hook.Fire(&logrus.Entry{})
+	a.Error(err, "hook.Fire should have error")
+}
+
+// create http test server
+func httptestNewServer(handler func(http.ResponseWriter, *http.Request)) (server *httptest.Server, dsn string) {
+	server = httptest.NewServer(http.HandlerFunc(handler))
+
+	fragments := strings.SplitN(server.URL, "://", 2)
+	dsn = fmt.Sprintf(
+		"%s://public:secret@%s/sentry/project-id",
+		fragments[0],
+		fragments[1],
+	)
+	return server, dsn
 }
