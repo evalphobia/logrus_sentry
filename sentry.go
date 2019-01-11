@@ -41,9 +41,10 @@ type SentryHook struct {
 	client *raven.Client
 	levels []logrus.Level
 
-	serverName   string
-	ignoreFields map[string]struct{}
-	extraFilters map[string]func(interface{}) interface{}
+	serverName    string
+	ignoreFields  map[string]struct{}
+	extraFilters  map[string]func(interface{}) interface{}
+	errorHandlers []func(entry *logrus.Entry, err error)
 
 	asynchronous bool
 
@@ -244,23 +245,30 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 
 	_, errCh := hook.client.Capture(packet, nil)
 
-	if hook.asynchronous {
+	switch {
+	case hook.asynchronous:
 		// Our use of hook.mu guarantees that we are following the WaitGroup rule of
 		// not calling Add in parallel with Wait.
 		hook.wg.Add(1)
 		go func() {
 			if err := <-errCh; err != nil {
-				fmt.Println(err)
+				for _, handlerFn := range hook.errorHandlers {
+					handlerFn(entry, err)
+				}
+				hook.wg.Done()
 			}
-			hook.wg.Done()
 		}()
 		return nil
-	} else if timeout := hook.Timeout; timeout == 0 {
+	case hook.Timeout == 0:
 		return nil
-	} else {
+	default:
+		timeout := hook.Timeout
 		timeoutCh := time.After(timeout)
 		select {
 		case err := <-errCh:
+			for _, handlerFn := range hook.errorHandlers {
+				handlerFn(entry, err)
+			}
 			return err
 		case <-timeoutCh:
 			return fmt.Errorf("no response from sentry server in %s", timeout)
@@ -340,6 +348,11 @@ func (hook *SentryHook) AddIgnore(name string) {
 // AddExtraFilter adds a custom filter function.
 func (hook *SentryHook) AddExtraFilter(name string, fn func(interface{}) interface{}) {
 	hook.extraFilters[name] = fn
+}
+
+// AddErrorHandler adds a error handler function used when Sentry returns error.
+func (hook *SentryHook) AddErrorHandler(fn func(entry *logrus.Entry, err error)) {
+	hook.errorHandlers = append(hook.errorHandlers, fn)
 }
 
 func (hook *SentryHook) formatExtraData(df *dataField) (result map[string]interface{}) {
