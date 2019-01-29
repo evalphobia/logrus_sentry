@@ -160,3 +160,4 @@ Other configuration options are:
 - `StacktraceConfiguration.Skip` how many stack frames to skip before stacktrace starts recording.
 - `StacktraceConfiguration.Context` the number of lines to include around a stack frame for context.
 - `StacktraceConfiguration.InAppPrefixes` the prefixes that will be matched against the stack frame to identify it as in_app
+- `StacktraceConfiguration.IncludeErrorBreadcrumb` whether to create a breadcrumb with the full text of error
