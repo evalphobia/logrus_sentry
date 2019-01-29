@@ -169,15 +169,12 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	err, hasError := df.getError()
 	var crumbs *Breadcrumbs
 	if hasError {
-		_, isCauser := err.(causer)
-		if isCauser {
-			crumbs = &Breadcrumbs{
-				Values: []Value{{
-					Timestamp: int64(time.Now().Unix()),
-					Type:      "error",
-					Message:   fmt.Sprintf("%+v", err),
-				}},
-			}
+		crumbs = &Breadcrumbs{
+			Values: []Value{{
+				Timestamp: int64(time.Now().Unix()),
+				Type:      "error",
+				Message:   fmt.Sprintf("%+v", err),
+			}},
 		}
 	}
 
