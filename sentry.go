@@ -83,6 +83,8 @@ type StackTraceConfiguration struct {
 	SendExceptionType bool
 	// whether the exception type and message should be switched.
 	SwitchExceptionTypeAndMessage bool
+	// whether to include a breadcrumb with the full error stack
+	IncludeErrorBreadcrumb bool
 }
 
 // NewSentryHook creates a hook to be added to an instance of logger
@@ -168,7 +170,7 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 
 	err, hasError := df.getError()
 	var crumbs *Breadcrumbs
-	if hasError {
+	if hasError && hook.StacktraceConfiguration.IncludeErrorBreadcrumb {
 		crumbs = &Breadcrumbs{
 			Values: []Value{{
 				Timestamp: int64(time.Now().Unix()),
