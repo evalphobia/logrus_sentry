@@ -255,8 +255,8 @@ func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 				for _, handlerFn := range hook.errorHandlers {
 					handlerFn(entry, err)
 				}
-				hook.wg.Done()
 			}
+			hook.wg.Done()
 		}()
 		return nil
 	case hook.Timeout == 0:
