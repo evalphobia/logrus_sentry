@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/getsentry/raven-go"
+	raven "github.com/getsentry/raven-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -83,6 +83,8 @@ type StackTraceConfiguration struct {
 	SendExceptionType bool
 	// whether the exception type and message should be switched.
 	SwitchExceptionTypeAndMessage bool
+	// whether to include a breadcrumb with the full error stack
+	IncludeErrorBreadcrumb bool
 }
 
 // NewSentryHook creates a hook to be added to an instance of logger
@@ -163,12 +165,25 @@ func setAsync(hook *SentryHook) *SentryHook {
 func (hook *SentryHook) Fire(entry *logrus.Entry) error {
 	hook.mu.RLock() // Allow multiple go routines to log simultaneously
 	defer hook.mu.RUnlock()
-	packet := raven.NewPacket(entry.Message)
+
+	df := newDataField(entry.Data)
+
+	err, hasError := df.getError()
+	var crumbs *Breadcrumbs
+	if hasError && hook.StacktraceConfiguration.IncludeErrorBreadcrumb {
+		crumbs = &Breadcrumbs{
+			Values: []Value{{
+				Timestamp: int64(time.Now().Unix()),
+				Type:      "error",
+				Message:   fmt.Sprintf("%+v", err),
+			}},
+		}
+	}
+
+	packet := raven.NewPacketWithExtra(entry.Message, nil, crumbs)
 	packet.Timestamp = raven.Timestamp(entry.Time)
 	packet.Level = severityMap[entry.Level]
 	packet.Platform = "go"
-
-	df := newDataField(entry.Data)
 
 	// set special fields
 	if hook.serverName != "" {
@@ -388,4 +403,22 @@ func formatData(value interface{}) (formatted interface{}) {
 	default:
 		return value
 	}
+}
+
+// utility classes for breadcrumb support
+type Breadcrumbs struct {
+	Values []Value `json:"values"`
+}
+
+type Value struct {
+	Timestamp int64       `json:"timestamp"`
+	Type      string      `json:"type"`
+	Message   string      `json:"message"`
+	Category  string      `json:"category"`
+	Level     string      `json:"string"`
+	Data      interface{} `json:"data"`
+}
+
+func (b *Breadcrumbs) Class() string {
+	return "breadcrumbs"
 }
