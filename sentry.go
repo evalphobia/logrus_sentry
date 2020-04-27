@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ansel1/merry"
 	raven "github.com/getsentry/raven-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -305,15 +306,23 @@ func (hook *SentryHook) Flush() {
 
 func (hook *SentryHook) findStacktrace(err error) *raven.Stacktrace {
 	var stacktrace *raven.Stacktrace
-	var stackErr errors.StackTrace
+	var stack []uintptr
 	for err != nil {
-		// Find the earliest *raven.Stacktrace, or error.StackTrace
+		// Find the earliest *raven.Stacktrace, error.StackTrace or merry.Stack
 		if tracer, ok := err.(Stacktracer); ok {
 			stacktrace = tracer.GetStacktrace()
-			stackErr = nil
+			stack = nil
 		} else if tracer, ok := err.(pkgErrorStackTracer); ok {
 			stacktrace = nil
-			stackErr = tracer.StackTrace()
+			stackErr := tracer.StackTrace()
+			stackFrames := []errors.Frame(stackErr)
+			stack = make([]uintptr, len(stackFrames))
+			for i := 0; i < len(stack); i++ {
+				stack[i] = uintptr(stackFrames[i])
+			}
+		} else {
+			stacktrace = nil
+			stack = merry.Stack(err)
 		}
 		if cause, ok := err.(causer); ok {
 			err = cause.Cause()
@@ -321,20 +330,19 @@ func (hook *SentryHook) findStacktrace(err error) *raven.Stacktrace {
 			break
 		}
 	}
-	if stackErr != nil {
-		stacktrace = hook.convertStackTrace(stackErr)
+	if stack != nil {
+		stacktrace = hook.convertStack(stack)
 	}
 	return stacktrace
 }
 
-// convertStackTrace converts an errors.StackTrace into a natively consumable
+// convertStack converts an []uintptr into a natively consumable
 // *raven.Stacktrace
-func (hook *SentryHook) convertStackTrace(st errors.StackTrace) *raven.Stacktrace {
+func (hook *SentryHook) convertStack(stack []uintptr) *raven.Stacktrace {
 	stConfig := &hook.StacktraceConfiguration
-	stFrames := []errors.Frame(st)
-	frames := make([]*raven.StacktraceFrame, 0, len(stFrames))
-	for i := range stFrames {
-		pc := uintptr(stFrames[i])
+	frames := make([]*raven.StacktraceFrame, 0, len(stack))
+	for i := range stack {
+		pc := stack[i]
 		fn := runtime.FuncForPC(pc)
 		file, line := fn.FileLine(pc)
 		frame := raven.NewStacktraceFrame(pc, fn.Name(), file, line, stConfig.Context, stConfig.InAppPrefixes)
