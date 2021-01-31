@@ -3,6 +3,7 @@ package logrus_sentry
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -393,6 +394,15 @@ func (hook *SentryHook) formatExtraData(df *dataField) (result map[string]interf
 
 // formatData returns value as a suitable format.
 func formatData(value interface{}) (formatted interface{}) {
+	if value == nil {
+		valueType := reflect.TypeOf(value)
+		if valueType == nil {
+			return "nil"
+		}
+
+		return "nil " + valueType.String()
+	}
+
 	switch value := value.(type) {
 	case json.Marshaler:
 		return value
